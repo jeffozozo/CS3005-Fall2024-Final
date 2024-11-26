@@ -21,13 +21,16 @@ private:
     void handle_hammer_shot(RobotBase* robot, int shot_row, int shot_col);
     void handle_emp_shot(RobotBase* robot);
     void apply_damage_to_robot(int row, int col, WeaponType weapon, std::set<RobotBase*>& robots_hit);
-    int calculate_damage(WeaponType weapon, const RobotBase* bot);
+    int calculate_damage(WeaponType weapon, int armor_level); 
     void handle_move(RobotBase* robot, int move_row, int move_col);
 
 public:
-    void set_size(int row_in, int col_in);
+
+    Arena(int row_in, int col_in);
     bool load_robots();
+    void initialize_board(); 
     void run_simulation();
+    
 };
 
 #endif
