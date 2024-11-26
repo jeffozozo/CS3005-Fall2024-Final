@@ -20,12 +20,17 @@ private:
 
 public:
 
+    int m_arena_row_max;
+    int m_arena_col_max;
+
     RobotBase(int move_in, int armor_in, WeaponType weapon_in);
 
     int get_health();
     int get_armor();
     int get_move();
     WeaponType get_weapon();
+
+    void set_arena_size(int row_max, int col_max);
 
     // Final methods (cannot be overridden)
     virtual void get_current_location(int& current_row, int& current_col) final;

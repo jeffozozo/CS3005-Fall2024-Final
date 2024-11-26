@@ -16,27 +16,37 @@ bool Arena::load_robots()
 {
     namespace fs = std::filesystem;
     std::cout << "Loading Robots..." << std::endl;
-    try {
+
+    try 
+    {
         // Scan the current directory for Robot_<name>.cpp files
-        for (const auto& entry : fs::directory_iterator(".")) {
-            if (entry.is_regular_file()) {
+        for (const auto& entry : fs::directory_iterator(".")) 
+        {
+            if (entry.is_regular_file()) 
+            {
                 std::string filename = entry.path().filename().string();
 
                 // Check if the file matches the naming pattern Robot_<name>.cpp
-                if (filename.rfind("Robot_", 0) == 0 && filename.substr(filename.size() - 4) == ".cpp") {
+                if (filename.rfind("Robot_", 0) == 0 && filename.substr(filename.size() - 4) == ".cpp") 
+                {
                     std::string robot_name = filename.substr(6, filename.size() - 10); // Extract <name>
+                    std::string shared_lib = "lib" + robot_name + ".so";
 
                     // Compile the file into a shared library
-                    std::string shared_lib = "lib" + robot_name + ".so";
-                    std::string compile_cmd = "g++ -shared -fPIC -o " + shared_lib + " " + filename + " -I. -std=c++17";
-                    if (std::system(compile_cmd.c_str()) != 0) {
-                        std::cerr << "Failed to compile " << filename << std::endl;
+                    std::string compile_cmd = "g++ -shared -fPIC -o " + shared_lib + " " + filename + " RobotBase.o RadarObj.o -I. -std=c++20";
+                    std::cout << "Compiling " << filename << " to " << shared_lib << "...\n";
+
+                    int compile_result = std::system(compile_cmd.c_str());
+                    if (compile_result != 0) 
+                    {
+                        std::cerr << "Failed to compile " << filename << " with command: " << compile_cmd << std::endl;
                         continue;
                     }
 
                     // Load the shared library dynamically
                     void* handle = dlopen(shared_lib.c_str(), RTLD_LAZY);
-                    if (!handle) {
+                    if (!handle) 
+                    {
                         std::cerr << "Failed to load " << shared_lib << ": " << dlerror() << std::endl;
                         continue;
                     }
@@ -44,7 +54,8 @@ bool Arena::load_robots()
                     // Locate the factory function to create the robot
                     using RobotFactory = RobotBase* (*)();
                     RobotFactory create_robot = (RobotFactory)dlsym(handle, "create_robot");
-                    if (!create_robot) {
+                    if (!create_robot) 
+                    {
                         std::cerr << "Failed to find create_robot in " << shared_lib << ": " << dlerror() << std::endl;
                         dlclose(handle);
                         continue;
@@ -52,16 +63,36 @@ bool Arena::load_robots()
 
                     // Instantiate the robot and add it to the m_robots list
                     RobotBase* robot = create_robot();
-                    if (robot) {
+                    if (robot) 
+                    {
+                        // Set the arena size for the robot
+                        robot->set_arena_size(size_row, size_col);
+
+                        // Find a random valid position for the robot
+                        int row, col;
+                        do 
+                        {
+                            row = std::rand() % size_row;
+                            col = std::rand() % size_col;
+                        } while (m_board[row][col] != '.'); // Ensure it's an empty spot
+
+                        robot->set_next_location(row, col);
+                        m_board[row][col] = 'R'; // Mark the robot's position on the board
                         m_robots.push_back(robot);
-                        std::cout << "Loaded robot: " << robot_name << std::endl;
-                    } else {
+
+                        std::cout << "Loaded robot: " << robot_name << " at (" << row << ", " << col << ")\n";
+                    } 
+                    else 
+                    {
                         std::cerr << "Failed to create robot from " << shared_lib << std::endl;
+                        dlclose(handle);
                     }
                 }
             }
         }
-    } catch (const fs::filesystem_error& e) {
+    } 
+    catch (const fs::filesystem_error& e) 
+    {
         std::cerr << "Filesystem error: " << e.what() << std::endl;
         return false;
     }
@@ -69,8 +100,13 @@ bool Arena::load_robots()
     return !m_robots.empty(); // Return true if at least one robot was loaded
 }
 
+
 // Get radar results for a robot
-void Arena::get_radar_results(int radar_row, int radar_col, RadarObj &radar_results) {
+void Arena::get_radar_results(int radar_row, int radar_col, RadarObj &radar_results) 
+{
+    //zero out the radar object.
+    radar_results.set_empty();
+
     for (int r = radar_row - 1; r <= radar_row + 1; ++r) {
         for (int c = radar_col - 1; c <= radar_col + 1; ++c) {
             if (r >= 0 && r < size_row && c >= 0 && c < size_col) {
@@ -409,7 +445,7 @@ void Arena::run_simulation() {
             int radar_row = 0, radar_col = 0;
             robot->get_radar_location(radar_row, radar_col);
 
-            RadarObj radar_results(radar_row, radar_col);
+            RadarObj radar_results;
             get_radar_results(radar_row, radar_col, radar_results);
             robot->set_radar_results(radar_results);
         }
@@ -427,7 +463,6 @@ void Arena::run_simulation() {
                 handle_move(robot, move_row, move_col);
             }
         }
-
 
 
     }
