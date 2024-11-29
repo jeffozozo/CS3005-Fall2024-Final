@@ -1,8 +1,25 @@
 #include "RobotBase.h"
 
+
+//overload the << operator to print the weapon
+std::ostream& operator<<(std::ostream& os, const WeaponType& weapon)
+{
+    switch (weapon)
+    {
+        case flamethrower: os << "flamethrower"; break;
+        case railgun:      os << "railgun";      break;
+        case grenade:      os << "grenade";      break;
+        case hammer:       os << "hammer";       break;
+        case emp:          os << "emp";          break;
+        default:           os << "unknown";      break;
+    }
+
+    return os;
+}
+
 // Constructor
 RobotBase::RobotBase(int move_in, int armor_in, WeaponType weapon_in)
-    : m_health(100), m_weapon(weapon_in), m_name("Default"), radar_ok(true)
+    : m_health(100), m_weapon(weapon_in),  radar_ok(true), m_name("Default")
 {
     // Validate move input
     if (move_in < 0)
@@ -115,6 +132,38 @@ void RobotBase::disable_movement()
 {
     m_move = 0;
 }
+
+#include <iostream>
+#include <string>
+#include "RobotBase.h"
+
+void RobotBase::print_stats() 
+{
+    // Map weapon types to their names
+    std::string weapon_name;
+    switch (m_weapon) 
+    {
+        case flamethrower: weapon_name = "Flamethrower"; break;
+        case railgun:      weapon_name = "Railgun";      break;
+        case grenade:      weapon_name = "Grenade";      break;
+        case hammer:       weapon_name = "Hammer";       break;
+        case emp:          weapon_name = "EMP";         break;
+        default:           weapon_name = "Unknown";     break;
+    }
+
+    // Determine radar status
+    std::string radar_status = radar_ok ? "Operational" : "Disabled";
+
+    // Print the robot's statistics
+    std::cout << m_name << ":\n";
+    std::cout << "  Health: " << m_health << "\n";
+    std::cout << "  Weapon: " << weapon_name << "\n";
+    std::cout << "  Armor: " << m_armor << "\n";
+    std::cout << "  Move Speed: " << m_move << "\n";
+    std::cout << "  Radar: " << radar_status << "\n";
+    std::cout << "  Location: (" << m_location_row << "," << m_location_col << ")\n";
+}
+
 
 // Destructor
 RobotBase::~RobotBase()

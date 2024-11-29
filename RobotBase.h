@@ -3,6 +3,7 @@
 
 #include "RadarObj.h"
 #include <string>
+#include <iostream>
 
 
 enum WeaponType { flamethrower, railgun, grenade, hammer, emp };
@@ -13,13 +14,13 @@ private:
     int m_armor;
     int m_move;
     WeaponType m_weapon;
-    std::string m_name;
     bool radar_ok;
     int m_location_row;
     int m_location_col;
 
 public:
 
+    std::string m_name;
     int m_arena_row_max;
     int m_arena_col_max;
 
@@ -39,10 +40,11 @@ public:
     virtual void set_next_location(int new_row, int new_col) final;
     virtual void disable_movement() final;
     virtual bool radar_enabled() final;
+    virtual void print_stats() final;
 
     // Pure virtual methods (must be implemented by derived classes)
     virtual void get_radar_location(int& radar_row, int& radar_col) = 0;
-    virtual void set_radar_results(RadarObj& radar_results) = 0;
+    virtual void process_radar_results(RadarObj& radar_results) = 0;
     virtual bool get_shot_location(int& shot_row, int& shot_col) = 0;
     virtual bool get_move_direction(int& move_row, int& move_col) = 0;
 

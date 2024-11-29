@@ -1,22 +1,43 @@
 #include "RadarObj.h"
 
-// Clears radar data
-void RadarObj::set_empty() 
+// Constructor to initialize the radar board
+RadarObj::RadarObj(int rows, int cols)
+    : m_rows(rows), m_cols(cols), m_board(rows, std::vector<char>(cols, ' '))
 {
-    m_enemies.clear();
-    m_obstacles.clear();
-    obstacles_found = false;
-    enemies_found = false;
 }
 
-// Checks if enemies were found
-bool RadarObj::found_enemies() const 
+// Clears the radar board by resetting it to empty spaces
+void RadarObj::set_empty()
 {
-    return !m_enemies.empty();
+    for (int r = 0; r < m_rows; ++r)
+    {
+        for (int c = 0; c < m_cols; ++c)
+        {
+            m_board[r][c] = ' ';
+        }
+    }
 }
 
-// Checks if obstacles were found
-bool RadarObj::found_obstacles() const 
+// Access a specific row of the radar board (const version)
+const std::vector<char>& RadarObj::operator[](int row) const
 {
-    return !m_obstacles.empty();
+    return m_board[row];
+}
+
+// Access a specific row of the radar board (non-const version)
+std::vector<char>& RadarObj::operator[](int row)
+{
+    return m_board[row];
+}
+
+// Get the number of rows in the radar board
+int RadarObj::get_rows() const
+{
+    return m_rows;
+}
+
+// Get the number of columns in the radar board
+int RadarObj::get_cols() const
+{
+    return m_cols;
 }
