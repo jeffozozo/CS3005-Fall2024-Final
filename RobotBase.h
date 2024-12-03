@@ -28,7 +28,7 @@ constexpr std::pair<int, int> directions[] = {
     {-1, -1}  // 8: Up-left
 };
 
-enum WeaponType { flamethrower, railgun, grenade, hammer, emp };
+enum WeaponType { flamethrower, railgun, grenade, hammer };
 
 class RobotBase {
 private:

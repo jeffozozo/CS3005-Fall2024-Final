@@ -32,7 +32,9 @@ private:
     void handle_move(RobotBase* robot);
     void handle_collision(RobotBase* robot, char cell, int row, int col);
  
+    //helpers
     bool winner();
+    int get_robot_index(int row, int col) const;
 
 public:
 

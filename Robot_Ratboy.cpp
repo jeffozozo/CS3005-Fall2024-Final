@@ -84,49 +84,54 @@ public:
     }
 
     // Determines the next movement direction
-    virtual void get_movement(int& move_direction, int& move_distance) override 
+void get_movement(int& move_direction, int& move_distance) override 
+{
+    int current_row, current_col;
+    get_current_location(current_row, current_col);
+    int move = get_move(); // Max movement range for this robot
+
+    // Step 1: Move left until column == 0
+    if (current_col > 0) 
     {
-        int current_row, current_col;
-        int move = get_move();
-        get_current_location(current_row, current_col);
-
-        if(current_col > 0)
-        {
-            move_direction = 7;
-            move_distance = move;
-            return;
-        }
-
-        if(m_moving_down)
-        {
-            if((current_row + move) > m_board_row_max)
-            {
-                std::cerr << "swapping to up." << current_row + move << " m_board_row_max: " << m_board_row_max << std::endl;
-                m_moving_down = false;
-                move_direction = 5;
-                move_distance = 1;
-                return;
-            }
-
-            move_direction = 5;
-            move_distance = move;
-            return;
-        }
-        else
-        {
-            if(current_row - move < 0)
-            {
-                std::cerr << "swapping to down." << std::endl;
-                m_moving_down = true;
-                move_direction = 1;
-                move_distance = 1;
-                return;
-            }
-        }
-
-        move_direction = 1;
-        move_distance = move;
+        move_direction = 7; // Left
+        move_distance = std::min(move, current_col); // Clamp to avoid going out of bounds
+        return;
     }
+
+    // Step 2: Vertical movement once column == 0
+    if (m_moving_down) 
+    {
+        // Move down if not at the bottom
+        if (current_row + move < m_board_row_max) 
+        {
+            move_direction = 5; // Down
+            move_distance = std::min(move, m_board_row_max - current_row - 1);
+        } 
+        else 
+        {
+            // Switch to moving up
+            m_moving_down = false;
+            move_direction = 1; // Up
+            move_distance = 1;  // Take a single step up
+        }
+    } 
+    else 
+    {
+        // Move up if not at the top
+        if (current_row - move >= 0) 
+        {
+            move_direction = 1; // Up
+            move_distance = std::min(move, current_row);
+        } 
+        else 
+        {
+            // Switch to moving down
+            m_moving_down = true;
+            move_direction = 5; // Down
+            move_distance = 1;  // Take a single step down
+        }
+    }
+}
 
 };
 

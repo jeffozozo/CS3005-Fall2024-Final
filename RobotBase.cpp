@@ -10,7 +10,6 @@ std::ostream& operator<<(std::ostream& os, const WeaponType& weapon)
         case railgun:      os << "railgun";      break;
         case grenade:      os << "grenade";      break;
         case hammer:       os << "hammer";       break;
-        case emp:          os << "emp";          break;
         default:           os << "unknown";      break;
     }
 
@@ -155,7 +154,6 @@ void RobotBase::print_stats()
         case railgun:      weapon_name = "Railgun";      break;
         case grenade:      weapon_name = "Grenade";      break;
         case hammer:       weapon_name = "Hammer";       break;
-        case emp:          weapon_name = "EMP";         break;
         default:           weapon_name = "Unknown";     break;
     }
 

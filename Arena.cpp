@@ -1,6 +1,21 @@
 #include "Arena.h"
 #include "RobotBase.h"
 
+
+
+#include <filesystem>
+#include <algorithm>
+#include <string>
+#include <iostream>
+#include <dlfcn.h> // For dynamic library loading
+
+
+// Define the unique characters for robots
+static const char unique_char[] = {
+    '!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '-', '_', '+', '=', '{', '}', '[', ']', '|',
+    ':', ';', '"', '\'', '<', '>', ',', '.', '?', '/', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'
+};
+
 // Constructor - Set the size of the arena
 Arena::Arena(int row_in, int col_in) 
 {
@@ -8,12 +23,6 @@ Arena::Arena(int row_in, int col_in)
     m_size_col = col_in;
     m_board.resize(m_size_row, std::vector<char>(m_size_col, '.'));
 }
-
-#include <filesystem>
-#include <algorithm>
-#include <string>
-#include <iostream>
-#include <dlfcn.h> // For dynamic library loading
 
 bool Arena::load_robots() 
 {
@@ -152,7 +161,6 @@ void Arena::get_radar_results(RobotBase* robot, int radar_direction, std::vector
         radar_obj.m_col = scan_col;
         radar_results.push_back(radar_obj);
 
-
     }
 }
 
@@ -179,10 +187,7 @@ void Arena::handle_shot(RobotBase* robot, int shot_row, int shot_col)
             std::cout << "hammer ";
             handle_hammer_shot(robot, shot_row, shot_col);
             break;
-        case emp:
-            std::cout << "EMP ";
-            handle_emp_shot(robot);
-            break;
+
         default:
             break;
     }
@@ -496,55 +501,6 @@ void Arena::handle_hammer_shot(RobotBase* robot, int shot_row, int shot_col)
     }
 }
 
-void Arena::handle_emp_shot(RobotBase* robot) 
-{
-    int current_row, current_col;
-    robot->get_current_location(current_row, current_col);
-
-    // Generate the list of affected cells
-    std::vector<std::pair<int, int>> affected_cells;
-    for (int r = current_row - 1; r <= current_row + 1; ++r) 
-    {
-        for (int c = current_col - 1; c <= current_col + 1; ++c) 
-        {
-            // Skip the current robot's cell
-            if (r == current_row && c == current_col)
-                continue;
-
-            // Ensure the cell is within bounds
-            if (r >= 0 && r < m_size_row && c >= 0 && c < m_size_col) 
-            {
-                affected_cells.emplace_back(r, c);
-            }
-        }
-    }
-
-    // Process the list of affected cells
-    for (const auto& cell : affected_cells) 
-    {
-        int r = cell.first;
-        int c = cell.second;
-
-        // Check if the cell contains a robot ('R')
-        if (m_board[r][c] == 'R') 
-        {
-            // Find the specific robot at this location
-            for (auto* target : m_robots) 
-            {
-                int target_row, target_col;
-                target->get_current_location(target_row, target_col);
-
-                if (target_row == r && target_col == c) 
-                {
-                    // Apply EMP damage to the robot
-                    apply_damage_to_robot(target, emp);
-                    break; 
-                }
-            }
-        }
-    }
-}
-
 
 
 void Arena::handle_move(RobotBase* robot) 
@@ -624,6 +580,11 @@ void Arena::handle_collision(RobotBase* robot, char cell, int row, int col)
                       << row << "," << col << ")." << std::endl;
             break;
 
+        case 'X': // Dead Robot
+            std::cout << robot->m_name << " is stopped by a dead robot at (" 
+                      << row << "," << col << ")." << std::endl;
+            break;
+
         case 'R': // Another robot
             std::cout << robot->m_name << " encounters another robot at (" 
                       << row << "," << col << ")." << std::endl;
@@ -633,6 +594,12 @@ void Arena::handle_collision(RobotBase* robot, char cell, int row, int col)
             robot->disable_movement();
             std::cout << robot->m_name << " is stuck in a pit at (" 
                       << row << "," << col << "). Movement disabled." << std::endl;
+            break;
+
+        case 'F': // Flamethrower
+            std::cout << robot->m_name << " encounters a flamethrower at (" 
+                      << row << "," << col << "). Taking damage!" << std::endl;
+            apply_damage_to_robot(robot, flamethrower); // Apply flamethrower damage
             break;
 
         default:
@@ -704,12 +671,45 @@ void Arena::print_board() const
         // Print the contents of the row
         for (int col = 0; col < m_size_col; ++col)
         {
-            std::cout << std::setw(col_width) << m_board[row][col];
+            char cell = m_board[row][col];
+            if (cell == 'R' || cell == 'X') 
+            {
+                int bot_index = get_robot_index(row, col);
+                if (bot_index != -1) 
+                {
+                    // Append the unique character to 'R' or 'X'
+                    std::cout << std::setw(col_width - 1) << cell << unique_char[bot_index];
+                }
+                else 
+                {
+                    // Default display if robot index is invalid
+                    std::cout << std::setw(col_width) << cell;
+                }
+            } 
+            else 
+            {
+                // Display other cells as-is
+                std::cout << std::setw(col_width) << cell;
+            }
         }
         std::cout << std::endl;
     }
 }
 
+int Arena::get_robot_index(int row, int col) const
+{
+    for (size_t i = 0; i < m_robots.size(); ++i)
+    {
+        int robot_row, robot_col;
+        m_robots[i]->get_current_location(robot_row, robot_col);
+
+        if (robot_row == row && robot_col == col)
+        {
+            return static_cast<int>(i);
+        }
+    }
+    return -1; // No robot found at the specified location
+}
 
 bool Arena::winner()
 {
@@ -739,19 +739,30 @@ void Arena::run_simulation() {
     int round = 0;
     while(!winner() && round < 1000000)
     {
+        int row, col;
+        char robot_id;
+
         std::cout << "=========== starting round " << round << " ===========" << std::endl;
         print_board();
 
         for (auto* robot : m_robots) 
         {
-            // handle dead robots.
-            if(robot->get_health() <= 0)
+            robot->get_current_location(row, col);
+            robot_id = unique_char[get_robot_index(row, col)];
+
+            // Handle dead robots
+            if (robot->get_health() <= 0) 
             {
-                std::cout << robot->m_name << " is out." << std::endl;
+                std::cout << robot->m_name <<" " << robot_id <<" is out.\n";
+                if (m_board[row][col] != 'X') 
+                {
+                    m_board[row][col] = 'X';
+                }
                 continue;
             }
 
-            std::cout << "\n" << robot->m_name << " begins turn." << std::endl;
+
+            std::cout << "\n" << robot->m_name << " " << robot_id << " begins turn." << std::endl;
             robot->print_stats();
 
             //handle radar
