@@ -55,8 +55,7 @@ RobotBase::RobotBase(int move_in, int armor_in, WeaponType weapon_in)
     // Initialize location and arena size
     m_location_row = 0;
     m_location_col = 0;
-    m_arena_row_max = 0;
-    m_arena_col_max = 0;
+
 }
 
 // Get the robot's current health
@@ -83,13 +82,6 @@ WeaponType RobotBase::get_weapon()
     return m_weapon;
 }
 
-// Set the arena size for the robot
-void RobotBase::set_arena_size(int row_max, int col_max)
-{
-    m_arena_row_max = row_max;
-    m_arena_col_max = col_max;
-}
-
 // Get the robot's current location
 void RobotBase::get_current_location(int& current_row, int& current_col)
 {
@@ -113,6 +105,7 @@ bool RobotBase::radar_enabled()
 int RobotBase::take_damage(int damage_in)
 {
     m_health -= damage_in;
+    m_armor -= 1;
     if (m_health < 0)
     {
         m_health = 0; // Prevent health from going below zero
@@ -121,7 +114,7 @@ int RobotBase::take_damage(int damage_in)
 }
 
 // Set the robot's next location
-void RobotBase::set_next_location(int new_row, int new_col)
+void RobotBase::move_to(int new_row, int new_col)
 {
     m_location_row = new_row;
     m_location_col = new_col;
@@ -131,6 +124,21 @@ void RobotBase::set_next_location(int new_row, int new_col)
 void RobotBase::disable_movement()
 {
     m_move = 0;
+}
+
+void RobotBase::reduce_armor(int amount)
+{
+    m_armor = m_armor - amount;
+    if(m_armor < 0)
+        m_armor = 0;
+
+}
+
+//set the arena size
+void RobotBase::set_boundaries(int row_max, int col_max)
+{
+    m_board_row_max = row_max;
+    m_board_col_max = col_max;
 }
 
 #include <iostream>

@@ -1,6 +1,6 @@
 # Object files common to all targets
-ALL_THE_OS = RadarObj.o Arena.o RobotBase.o
-THE_DOT_HS = RadarObj.h Arena.h RobotBase.h
+ALL_THE_OS = Arena.o RobotBase.o
+THE_DOT_HS = Arena.h RobotBase.h
 
 # The default target to build all executables
 all: RobotWarz test_robot
