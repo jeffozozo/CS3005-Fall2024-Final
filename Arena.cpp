@@ -118,10 +118,65 @@ bool Arena::load_robots()
 // Given the robot's preference on radar direction, get radar results
 void Arena::get_radar_results(RobotBase* robot, int radar_direction, std::vector<RadarObj>& radar_results) 
 {
-
     // Clear the radar results vector
     radar_results.clear();
 
+    if (radar_direction == 0) 
+    {
+        get_radar_local(robot, radar_results);
+    } 
+    else 
+    {
+        get_radar_ray(robot, radar_direction, radar_results);
+    }
+}
+
+void Arena::get_radar_local(RobotBase* robot, std::vector<RadarObj>& radar_results) 
+{
+    int current_row, current_col;
+    robot->get_current_location(current_row, current_col);
+
+    // Perform a 3x3 scan around the robot
+    for (int row_offset = -1; row_offset <= 1; ++row_offset) 
+    {
+        for (int col_offset = -1; col_offset <= 1; ++col_offset) 
+        {
+            // Skip the robot's own location
+            if (row_offset == 0 && col_offset == 0) 
+            {
+                continue;
+            }
+
+            int scan_row = current_row + row_offset;
+            int scan_col = current_col + col_offset;
+
+            // Skip out-of-bounds locations
+            if (scan_row < 0 || scan_row >= m_size_row || scan_col < 0 || scan_col >= m_size_col) 
+            {
+                continue;
+            }
+
+            // Get the cell content
+            char cell = m_board[scan_row][scan_col];
+
+            // Skip empty cells
+            if (cell == '.') 
+            {
+                continue;
+            }
+
+            // Record the radar object
+            RadarObj radar_obj;
+            radar_obj.m_type = cell;
+            radar_obj.m_row = scan_row;
+            radar_obj.m_col = scan_col;
+            radar_results.push_back(radar_obj);
+        }
+    }
+}
+
+void Arena::get_radar_ray(RobotBase* robot, int radar_direction, std::vector<RadarObj>& radar_results) 
+{
     int current_row, current_col;
     robot->get_current_location(current_row, current_col);
 
@@ -148,19 +203,18 @@ void Arena::get_radar_results(RobotBase* robot, int radar_direction, std::vector
         // Get the cell content
         char cell = m_board[scan_row][scan_col];
 
-        // if the cell is '.' skip it.
+        // Skip empty cells
         if (cell == '.') 
         {
             continue;
         }
 
-        // Found something, Record the radar object.
+        // Record the radar object
         RadarObj radar_obj;
         radar_obj.m_type = cell;
         radar_obj.m_row = scan_row;
         radar_obj.m_col = scan_col;
         radar_results.push_back(radar_obj);
-
     }
 }
 
@@ -714,13 +768,24 @@ int Arena::get_robot_index(int row, int col) const
 bool Arena::winner()
 {
     int num_living_robots = 0;
+    RobotBase *living_robot;
+
     for (auto* robot : m_robots)
     {
         if(robot->get_health() > 0)
+        {
             num_living_robots++;
+            living_robot = robot;
+        }
     }
 
-    return num_living_robots == 1;
+    if(num_living_robots == 1)
+    {
+        std::cout << living_robot->m_name << " is the winner.\n";
+        return true;
+    }
+
+    return false;
 
 }
 
@@ -768,9 +833,10 @@ void Arena::run_simulation() {
             //handle radar
             if(robot->radar_enabled())
             {
-                std::cout << "  checking radar ... ";
+                std::cout << "  checking radar, direction: ";
                 int radar_dir;
                 robot->get_radar_direction(radar_dir);
+                std::cout << radar_dir << " ... ";
                 get_radar_results(robot,radar_dir,radar_results);
                 robot->process_radar_results(radar_results);
                 if(radar_results.empty())

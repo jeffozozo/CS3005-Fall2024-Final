@@ -5,57 +5,52 @@
 class Robot_HammerTime : public RobotBase 
 {
 private:
-    int last_direction; // The last direction HammerTime moved or scanned
-
-    // Check if a target is within one square of HammerTime's location
-    bool is_target_within_one(const std::vector<RadarObj>& radar_results, int current_row, int current_col, int& target_row, int& target_col)
-    {
-        for (const auto& obj : radar_results)
-        {
-            if (obj.m_type == 'R' &&
-                std::abs(obj.m_row - current_row) <= 1 &&
-                std::abs(obj.m_col - current_col) <= 1)
-            {
-                target_row = obj.m_row;
-                target_col = obj.m_col;
-                return true;
-            }
-        }
-        return false;
-    }
+    int m_last_direction;
+    int m_target_row; // Row of the target robot within range
+    int m_target_col; // Column of the target robot within range
+    bool m_has_target; // Flag to indicate if a target is in range
 
 public:
-    Robot_HammerTime() : RobotBase(2, 5, hammer), last_direction(3) {} // Initialize with move=2, armor=5, hammer weapon, default direction right
+    Robot_HammerTime() 
+        : RobotBase(2, 5, hammer), m_last_direction(1), m_target_row(-1), m_target_col(-1), m_has_target(false) 
+    {}
 
-    // Determine radar direction (same as the movement direction)
+    // Always use the 'local' radar method for scanning
     virtual void get_radar_direction(int& radar_direction) override
     {
-        radar_direction = last_direction; // Always radar in the movement direction
+        radar_direction = 0; // Local radar method (3x3 area around the robot)
     }
 
-    // Process radar results (nothing special for HammerTime)
+    // Process radar results and determine if a robot is within range
     virtual void process_radar_results(const std::vector<RadarObj>& radar_results) override
     {
-        // No persistent state from radar needed for HammerTime
+        // Reset target state
+        m_has_target = false;
+
+        for (const auto& obj : radar_results)
+        {
+            if (obj.m_type == 'R') // Found a robot in the radar results
+            {
+                m_target_row = obj.m_row;
+                m_target_col = obj.m_col;
+                m_has_target = true;
+                return; // Stop checking after finding the first robot
+            }
+        }
     }
 
-    // Determine the shot location
+    // If a target is in range, shoot it
     virtual bool get_shot_location(int& shot_row, int& shot_col) override
     {
-        int current_row, current_col;
-        get_current_location(current_row, current_col);
-
-        std::vector<RadarObj> radar_results;
-        get_radar_direction(last_direction); // Make sure radar aligns with movement
-        process_radar_results(radar_results);
-
-        // Check if there's a robot within one space
-        if (is_target_within_one(radar_results, current_row, current_col, shot_row, shot_col))
+        if (m_has_target)
         {
-            return true; // Hammer swing at the robot
+            shot_row = m_target_row;
+            shot_col = m_target_col;
+            m_has_target = false; // Reset after shooting
+            return true; // Successfully set the shot location
         }
 
-        return false; // No target to attack
+        return false; // No target to shoot
     }
 
     // Handle movement in a spiral pattern
@@ -65,11 +60,11 @@ public:
         get_current_location(current_row, current_col);
 
         static const std::vector<int> spiral_directions = {3, 5, 7, 1}; // Right, Down, Left, Up
-        int attempts = 0;
+        int cycles = 0;
 
-        while (attempts < spiral_directions.size())
+        while (cycles < spiral_directions.size())
         {
-            int direction = spiral_directions[(last_direction - 1 + attempts) % spiral_directions.size()]; // Try next direction
+            int direction = spiral_directions[(m_last_direction - 1 + cycles) % spiral_directions.size()]; // Try next direction
             int delta_row = directions[direction].first;
             int delta_col = directions[direction].second;
 
@@ -82,11 +77,11 @@ public:
             {
                 move_direction = direction;
                 move_distance = 1; // Always move one step at a time
-                last_direction = direction; // Update the last direction
+                m_last_direction = direction; // Update the last direction
                 return;
             }
 
-            attempts++;
+            cycles++;
         }
 
         // If no valid move found, stay in place

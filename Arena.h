@@ -16,7 +16,8 @@ private:
 
     // radar
     void get_radar_results(RobotBase* robot, int radar_direction, std::vector<RadarObj>& radar_results); 
-    void check_radar_location(int& radar_row, int& radar_col, int robot_row, int robot_col);
+    void get_radar_local(RobotBase* robot, std::vector<RadarObj>& radar_results); 
+    void get_radar_ray(RobotBase* robot, int radar_direction, std::vector<RadarObj>& radar_results); 
  
     // shot
     void handle_shot(RobotBase* robot, int shot_row, int shot_col);
