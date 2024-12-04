@@ -1,7 +1,8 @@
 #include "RobotBase.h"
+#include <iostream>
+#include <string>
 
-
-//overload the << operator to print the weapon
+//overload the << operator to print the weapon type - handy.
 std::ostream& operator<<(std::ostream& os, const WeaponType& weapon)
 {
     switch (weapon)
@@ -16,18 +17,18 @@ std::ostream& operator<<(std::ostream& os, const WeaponType& weapon)
     return os;
 }
 
-// Constructor
+// Constructor - Notice that you can't set move speed more than 5
 RobotBase::RobotBase(int move_in, int armor_in, WeaponType weapon_in)
-    : m_health(100), m_weapon(weapon_in),  radar_ok(true), m_name("Default")
+    : m_health(100), m_weapon(weapon_in),  radar_ok(true), m_name("Blank_Robot")
 {
     // Validate move input
     if (move_in < 0)
     {
         m_move = 0;
     }
-    else if (move_in > 4)
+    else if (move_in > 5)
     {
-        m_move = 4;
+        m_move = 5;
     }
     else
     {
@@ -51,11 +52,14 @@ RobotBase::RobotBase(int move_in, int armor_in, WeaponType weapon_in)
         m_armor = armor_in;
     }
 
-    // Initialize location and arena size
+    // blank out location
     m_location_row = 0;
     m_location_col = 0;
 
 }
+
+// Getters - because you're not allowed to manipulate the robots internal data directly.
+// this is a good example of why you need private member variables.
 
 // Get the robot's current health
 int RobotBase::get_health()
@@ -88,7 +92,7 @@ void RobotBase::get_current_location(int& current_row, int& current_col)
     current_col = m_location_col;
 }
 
-// Disable the robot's radar
+// Disable the robot's radar - unused.
 void RobotBase::disable_radar()
 {
     radar_ok = false;
@@ -107,7 +111,7 @@ int RobotBase::take_damage(int damage_in)
     m_armor -= 1;
     if (m_health < 0)
     {
-        m_health = 0; // Prevent health from going below zero
+        m_health = 0; 
     }
     return m_health;
 }
@@ -140,22 +144,8 @@ void RobotBase::set_boundaries(int row_max, int col_max)
     m_board_col_max = col_max;
 }
 
-#include <iostream>
-#include <string>
-#include "RobotBase.h"
-
 void RobotBase::print_stats() 
 {
-    // Map weapon types to their names
-    std::string weapon_name;
-    switch (m_weapon) 
-    {
-        case flamethrower: weapon_name = "Flamethrower"; break;
-        case railgun:      weapon_name = "Railgun";      break;
-        case grenade:      weapon_name = "Grenade";      break;
-        case hammer:       weapon_name = "Hammer";       break;
-        default:           weapon_name = "Unknown";     break;
-    }
 
     // Determine radar status
     std::string radar_status = radar_ok ? "Operational" : "Disabled";
@@ -163,7 +153,7 @@ void RobotBase::print_stats()
     // Print the robot's statistics
     std::cout << m_name << ":\n";
     std::cout << "  Health: " << m_health << "\n";
-    std::cout << "  Weapon: " << weapon_name << "\n";
+    std::cout << "  Weapon: " << m_weapon << "\n";
     std::cout << "  Armor: " << m_armor << "\n";
     std::cout << "  Move Speed: " << m_move << "\n";
     std::cout << "  Radar: " << radar_status << "\n";

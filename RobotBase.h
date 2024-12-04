@@ -4,7 +4,9 @@
 #include <string>
 #include <iostream>
 
-
+// This object could stand to have it's own file. But I just left it in here because... I'm cool like that.
+// This is basically a 'cell' in the board. it contains the 'char' indicating what is at that location
+// and the row and column. That's it. Don't add to this or change it and everyone's robots can work together.
 class RadarObj 
 {
 public:
@@ -12,12 +14,15 @@ public:
     int m_row;    // Row of the object
     int m_col;    // Column of the object
 
-    RadarObj() {}
+    // default constructor so you can make an empty one and fill it.
+    RadarObj() {} 
     RadarObj(char type, int row, int col) : m_type(type), m_row(row), m_col(col) {}
 };
 
-constexpr std::pair<int, int> directions[] = {
-    {0, 0},   // Placeholder for index 0 - if you return 0, no movement will occur
+// this works for both movement and radar checks
+constexpr std::pair<int, int> directions[] = 
+{
+    {0, 0},   // index 0 - placeholder
     {-1, 0},  // 1: Up
     {-1, 1},  // 2: Up-right
     {0, 1},   // 3: Right
@@ -28,15 +33,18 @@ constexpr std::pair<int, int> directions[] = {
     {-1, -1}  // 8: Up-left
 };
 
+// read about enums these are really just ints. 0-3.
 enum WeaponType { flamethrower, railgun, grenade, hammer };
 
-class RobotBase {
+// don't change anything in here. Understand it though...
+class RobotBase 
+{
 private:
     int m_health;
     int m_armor;
     int m_move;
     WeaponType m_weapon;
-    bool radar_ok;
+    bool radar_ok; // not used in this version...
     int m_location_row;
     int m_location_col;
 
@@ -54,7 +62,7 @@ public:
     WeaponType get_weapon();
     void set_boundaries(int row_max, int col_max);
 
-    // Final methods (cannot be overridden)
+    // final methods (final means that these cannot be overridden)
     virtual void get_current_location(int& current_row, int& current_col) final;
     virtual void disable_radar() final;
     virtual int take_damage(int damage_in) final;
@@ -64,7 +72,7 @@ public:
     virtual bool radar_enabled() final;
     virtual void print_stats() final;
 
-    // Pure virtual methods (must be implemented by derived classes)
+    // Pure virtual methods ( = 0 means that they must be implemented by derived classes)
     virtual void get_radar_direction(int& radar_direction) = 0;
     virtual void process_radar_results(const std::vector<RadarObj>& radar_results) = 0;
     virtual bool get_shot_location(int& shot_row, int& shot_col) = 0;

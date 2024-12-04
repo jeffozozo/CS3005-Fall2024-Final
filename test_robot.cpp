@@ -3,6 +3,40 @@
 #include <vector>
 #include <dlfcn.h>
 
+RobotBase* load_robot(const std::string& shared_lib, void* &handle) 
+{
+    std::cout << "Testing robot from " << shared_lib << "...\n";
+
+    // Dynamically load the shared library
+    handle = dlopen(shared_lib.c_str(), RTLD_LAZY);
+    if (!handle) 
+    {
+        std::cerr << "Failed to load " << shared_lib << ": " << dlerror() << '\n';
+        return nullptr;
+    }
+
+    // Locate the factory function to create the robot
+    using RobotFactory = RobotBase* (*)();
+    RobotFactory create_robot = (RobotFactory)dlsym(handle, "create_robot");
+    if (!create_robot) 
+    {
+        std::cerr << "Failed to find create_robot in " << shared_lib << ": " << dlerror() << '\n';
+        dlclose(handle);
+        return nullptr;
+    }
+
+    // Instantiate the robot
+    RobotBase* robot = create_robot();
+    if (!robot) 
+    {
+        std::cerr << "Failed to create robot instance from " << shared_lib << '\n';
+        dlclose(handle);
+        return nullptr;
+    }
+
+    return robot;
+}
+
 void test_robot_behavior(RobotBase* robot) 
 {
     // Set up the robot
@@ -112,46 +146,15 @@ void test_robot_behavior(RobotBase* robot)
     }
 }
 
-bool test_robot(const std::string& shared_lib) {
-    std::cout << "Testing robot from " << shared_lib << "...\n";
 
-    // Dynamically load the shared library
-    void* handle = dlopen(shared_lib.c_str(), RTLD_LAZY);
-    if (!handle) {
-        std::cerr << "Failed to load " << shared_lib << ": " << dlerror() << '\n';
-        return false;
-    }
 
-    // Locate the factory function to create the robot
-    using RobotFactory = RobotBase* (*)();
-    RobotFactory create_robot = (RobotFactory)dlsym(handle, "create_robot");
-    if (!create_robot) {
-        std::cerr << "Failed to find create_robot in " << shared_lib << ": " << dlerror() << '\n';
-        dlclose(handle);
-        return false;
-    }
-
-    // Instantiate the robot
-    RobotBase* robot = create_robot();
-    if (!robot) {
-        std::cerr << "Failed to create robot instance from " << shared_lib << '\n';
-        dlclose(handle);
-        return false;
-    }
-
-    // Test the robot behavior
-    test_robot_behavior(robot);
-
-    // Cleanup
-    delete robot;
-    dlclose(handle);
-
-    std::cout << "Robot testing complete.\n";
-    return true;
-}
-
-int main(int argc, char* argv[]) {
-    if (argc != 2) {
+int main(int argc, char* argv[]) 
+{
+    // we didn't talk about command line arguments. This is how they work. 'argc' contains
+    // the number of arguments passed (including the name of the executable.)
+    // 'argv[]' contains the array of strings that were passed in.
+    if (argc != 2) 
+    {
         std::cerr << "Usage: " << argv[0] << " <robot_library>\n";
         return 1;
     }
@@ -168,11 +171,17 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    // Test the robot
-    if (!test_robot(shared_lib)) {
-        std::cerr << "Robot test failed.\n";
-        return 1;
-    }
+    RobotBase *robot;
+    void *handle;
+
+    robot = load_robot(shared_lib, handle);
+    test_robot_behavior(robot);
+
+    // Cleanup
+    delete robot;
+    dlclose(handle);
+
+    std::cout << "Robot testing complete.\n";
 
     return 0;
 }
