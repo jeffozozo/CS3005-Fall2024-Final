@@ -15,7 +15,7 @@ RobotBase* load_robot(const std::string& shared_lib, void* &handle)
         return nullptr;
     }
 
-    // Locate the factory function to create the robot
+    // Locate the factory function to create the robot and 'assign' it to this 'create_robot' function.
     using RobotFactory = RobotBase* (*)();
     RobotFactory create_robot = (RobotFactory)dlsym(handle, "create_robot");
     if (!create_robot) 
@@ -25,7 +25,8 @@ RobotBase* load_robot(const std::string& shared_lib, void* &handle)
         return nullptr;
     }
 
-    // Instantiate the robot
+    // Instantiate the robot - it will need to be deleted later. This actually calls the function that exists
+    // in the ROBOT code! Cool huh! It's in the bottom of the Robot where it says extern "C"
     RobotBase* robot = create_robot();
     if (!robot) 
     {
@@ -37,6 +38,8 @@ RobotBase* load_robot(const std::string& shared_lib, void* &handle)
     return robot;
 }
 
+// you can add or remove behaviors here if you like.
+// make a custom version of this tester, so that it tests YOUR robot...
 void test_robot_behavior(RobotBase* robot) 
 {
     // Set up the robot
@@ -92,20 +95,9 @@ void test_robot_behavior(RobotBase* robot)
         int move_direction = 0, move_distance = 0;
         robot->get_movement(move_direction, move_distance);
 
-        if (move_direction != 0 && move_distance != 0) {
-            // Predefined directional increments for movement (1-8, clock directions)
-            static const std::pair<int, int> directions[] = {
-                {0, 0},   // Placeholder for index 0 (unused)
-                {-1, 0},  // 1: Up
-                {-1, 1},  // 2: Up-right
-                {0, 1},   // 3: Right
-                {1, 1},   // 4: Down-right
-                {1, 0},   // 5: Down
-                {1, -1},  // 6: Down-left
-                {0, -1},  // 7: Left
-                {-1, -1}  // 8: Up-left
-            };
-
+        if (move_direction != 0 && move_distance != 0) 
+        {
+            // Predefined directional increments for movement (1-8, clock directions) come from RobotBase
             int delta_row = directions[move_direction].first;
             int delta_col = directions[move_direction].second;
 
@@ -162,7 +154,7 @@ int main(int argc, char* argv[])
     const std::string robot_file = argv[1];
     const std::string shared_lib = "lib" + robot_file.substr(0, robot_file.find(".cpp")) + ".so";
 
-    // Compile the robot into a shared library
+    // Compile the robot into a shared library -fPIC is Position Independant Code - look it up!
     std::string compile_cmd = "g++ -shared -fPIC -o " + shared_lib + " " + robot_file + " RobotBase.o -I. -std=c++20";
     std::cout << "Compiling " << robot_file << " into " << shared_lib << "...\n";
 
