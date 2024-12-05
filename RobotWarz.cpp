@@ -7,6 +7,6 @@ int main()
     Arena the_arena(20,20);
     the_arena.initialize_board();
     the_arena.load_robots();
-    the_arena.run_simulation();
+    the_arena.run_simulation(true);
 
 }

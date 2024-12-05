@@ -42,8 +42,8 @@ public:
     Arena(int row_in, int col_in);
     bool load_robots();
     void initialize_board();
-    void print_board() const; 
-    void run_simulation();
+    void print_board(int round, bool clear_screen=false) const; 
+    void run_simulation(bool live=false);
 
 };
 

@@ -151,13 +151,12 @@ void RobotBase::print_stats()
     std::string radar_status = radar_ok ? "Operational" : "Disabled";
 
     // Print the robot's statistics
-    std::cout << m_name << ":\n";
-    std::cout << "  Health: " << m_health << "\n";
-    std::cout << "  Weapon: " << m_weapon << "\n";
-    std::cout << "  Armor: " << m_armor << "\n";
-    std::cout << "  Move Speed: " << m_move << "\n";
-    std::cout << "  Radar: " << radar_status << "\n";
-    std::cout << "  Location: (" << m_location_row << "," << m_location_col << ")\n";
+    std::cout << m_name << ": ";
+    std::cout << "  H: " << m_health;
+    std::cout << "  W: " << m_weapon;
+    std::cout << "  A: " << m_armor;
+    std::cout << "  M: " << m_move;
+    std::cout << "  at: (" << m_location_row << "," << m_location_col << ") ";
 }
 
 

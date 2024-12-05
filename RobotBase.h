@@ -3,6 +3,8 @@
 
 #include <string>
 #include <iostream>
+#include <vector>
+#include <utility>
 
 // This object could stand to have it's own file. But I just left it in here because... I'm cool like that.
 // This is basically a 'cell' in the board. it contains the 'char' indicating what is at that location

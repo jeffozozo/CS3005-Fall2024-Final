@@ -1,12 +1,10 @@
 #include "Arena.h"
 #include "RobotBase.h"
-
-
-
 #include <filesystem>
 #include <algorithm>
 #include <string>
 #include <iostream>
+#include <unistd.h>
 #include <dlfcn.h> // For dynamic library loading
 
 
@@ -702,9 +700,17 @@ void Arena::initialize_board()
 
 }
 
-
-void Arena::print_board() const
+void Arena::print_board(int round, bool clear_screen) const
 {
+    if (clear_screen)
+    {
+        // Clear the screen
+        std::cout << "\033[2J\033[1;1H"; // ANSI escape code to clear screen and reset cursor
+    }
+
+    std::cout << "              =========== starting round " << round << " ===========" << std::endl;
+ 
+
     // Calculate consistent spacing for the columns
     const int col_width = 3; // Adjust width for even spacing (enough for two-digit numbers and a space)
 
@@ -748,6 +754,8 @@ void Arena::print_board() const
         }
         std::cout << std::endl;
     }
+
+
 }
 
 int Arena::get_robot_index(int row, int col) const
@@ -791,7 +799,8 @@ bool Arena::winner()
 
 // Run the simulation
 // assumes robots have been loaded.
-void Arena::run_simulation() {
+void Arena::run_simulation(bool live) 
+{
 
     std::vector<RadarObj> radar_results;
 
@@ -807,8 +816,7 @@ void Arena::run_simulation() {
         int row, col;
         char robot_id;
 
-        std::cout << "=========== starting round " << round << " ===========" << std::endl;
-        print_board();
+        print_board(round, live);
 
         for (auto* robot : m_robots) 
         {
@@ -826,8 +834,6 @@ void Arena::run_simulation() {
                 continue;
             }
 
-
-            std::cout << "\n" << robot->m_name << " " << robot_id << " begins turn." << std::endl;
             robot->print_stats();
 
             //handle radar
@@ -840,9 +846,9 @@ void Arena::run_simulation() {
                 get_radar_results(robot,radar_dir,radar_results);
                 robot->process_radar_results(radar_results);
                 if(radar_results.empty())
-                    std::cout << " found nothing. \n";
+                    std::cout << " found nothing. ";
                 else
-                    std::cout << " found '" << radar_results[0].m_type << "' at (" << radar_results[0].m_row << "," << radar_results[0].m_col << ")\n";
+                    std::cout << " found '" << radar_results[0].m_type << "' at (" << radar_results[0].m_row << "," << radar_results[0].m_col << ") ";
 
             }
 
@@ -861,7 +867,14 @@ void Arena::run_simulation() {
             }
 
         }
+        // Pause for 1 second if live is true
+        if (live)
+        {
+            sleep(1); // Plain C-style sleep
+        }
+
         round++;
+
     }
 
     std::cout << "game over.";

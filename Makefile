@@ -11,7 +11,7 @@ all: RobotWarz test_robot
 
 # Link object files to create RobotWarz executable
 RobotWarz: RobotWarz.o $(ALL_THE_OS)
-	g++ -g -o RobotWarz RobotWarz.o $(ALL_THE_OS)
+	g++ -g -o RobotWarz RobotWarz.o $(ALL_THE_OS) -ldl
 
 # Link object files to create test_robot executable
 test_robot: test_robot.o $(ALL_THE_OS)
