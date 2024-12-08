@@ -844,11 +844,12 @@ void Arena::run_simulation(bool live)
                 robot->get_radar_direction(radar_dir);
                 std::cout << radar_dir << " ... ";
                 get_radar_results(robot,radar_dir,radar_results);
-                robot->process_radar_results(radar_results);
+
                 if(radar_results.empty())
                     std::cout << " found nothing. ";
                 else
                     std::cout << " found '" << radar_results[0].m_type << "' at (" << radar_results[0].m_row << "," << radar_results[0].m_col << ") ";
+                robot->process_radar_results(radar_results);
 
             }
 
