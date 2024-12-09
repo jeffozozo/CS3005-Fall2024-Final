@@ -597,22 +597,36 @@ void Arena::handle_move(RobotBase* robot)
     int target_row = std::clamp(current_row + delta_row * move_distance, 0, m_size_row - 1);
     int target_col = std::clamp(current_col + delta_col * move_distance, 0, m_size_col - 1);
 
-    // Check if clamping results in staying at the same location
-    if (target_row == current_row && target_col == current_col) 
-        return;
-
     // Clear the robot's current position on the board
     m_board[current_row][current_col] = '.';
 
-    // Check for obstacles or other effects
-    char cell = m_board[target_row][target_col];
-    if (cell != '.') 
+    // Step through the path to the target location
+    for (int step = 1; step <= move_distance; ++step)
     {
-        std::cout << " collision at (" << target_row << "," << target_col << ")\n";
-        handle_collision(robot, cell, target_row, target_col);
+        int intermediate_row = std::clamp(current_row + delta_row * step, 0, m_size_row - 1);
+        int intermediate_col = std::clamp(current_col + delta_col * step, 0, m_size_col - 1);
 
-        m_board[current_row][current_col] = 'R';
-        return; 
+        char cell = m_board[intermediate_row][intermediate_col];
+        if (cell == 'F') // Flamethrower detected
+        {
+            std::cout << robot->m_name << " moves through a flamethrower at (" 
+                      << intermediate_row << "," << intermediate_col << "). Taking damage!\n";
+            apply_damage_to_robot(robot, flamethrower);
+        }
+
+        // Stop movement if encountering an obstacle
+        if (step == move_distance) // At the final destination
+        {
+            if (cell != '.') 
+            {
+                std::cout << " collision at (" << intermediate_row << "," << intermediate_col << ")\n";
+                handle_collision(robot, cell, intermediate_row, intermediate_col);
+
+                // Restore current position if collision occurred
+                m_board[current_row][current_col] = 'R';
+                return;
+            }
+        }
     }
 
     // Move the robot to the target position
@@ -850,9 +864,7 @@ void Arena::run_simulation(bool live)
                 else
                     std::cout << " found '" << radar_results[0].m_type << "' at (" << radar_results[0].m_row << "," << radar_results[0].m_col << ") ";
                 robot->process_radar_results(radar_results);
-
             }
-
 
             // Handle shoot or move
             int shot_row = 0, shot_col = 0;
