@@ -72,7 +72,7 @@ public:
     virtual void disable_movement() final;
     virtual void reduce_armor(int amount);
     virtual bool radar_enabled() final;
-    virtual void print_stats() final;
+    virtual std::string print_stats() const  final;
 
     // Pure virtual methods ( = 0 means that they must be implemented by derived classes)
     virtual void get_radar_direction(int& radar_direction) = 0;

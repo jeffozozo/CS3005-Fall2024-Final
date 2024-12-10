@@ -1,6 +1,8 @@
 #include "RobotBase.h"
 #include <iostream>
 #include <string>
+#include <sstream>
+
 
 //overload the << operator to print the weapon type - handy.
 std::ostream& operator<<(std::ostream& os, const WeaponType& weapon)
@@ -143,19 +145,20 @@ void RobotBase::set_boundaries(int row_max, int col_max)
     m_board_col_max = col_max;
 }
 
-void RobotBase::print_stats() 
-{
-
+std::string RobotBase::print_stats() const {
     // Determine radar status
     std::string radar_status = radar_ok ? "Operational" : "Disabled";
 
-    // Print the robot's statistics
-    std::cout << m_name << ": ";
-    std::cout << "  H: " << m_health;
-    std::cout << "  W: " << m_weapon;
-    std::cout << "  A: " << m_armor;
-    std::cout << "  M: " << m_move;
-    std::cout << "  at: (" << m_location_row << "," << m_location_col << ") ";
+    // Construct the robot's statistics as a string
+    std::ostringstream stats;
+    stats << m_name << ": ";
+    stats << "  H: " << m_health;
+    stats << "  W: " << m_weapon;
+    stats << "  A: " << m_armor;
+    stats << "  M: " << m_move;
+    stats << "  at: (" << m_location_row << "," << m_location_col << ") ";
+
+    return stats.str();
 }
 
 
