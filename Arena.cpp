@@ -394,71 +394,67 @@ void Arena::handle_flame_shot(RobotBase* robot, int shot_row, int shot_col)
     }
 }
 
-void Arena::handle_railgun_shot(RobotBase* robot, int shot_row, int shot_col)
+void Arena::handle_railgun_shot(RobotBase* robot, int shot_row, int shot_col) 
 {
     int current_row, current_col;
     robot->get_current_location(current_row, current_col);
 
+    // Calculate directional increments for the ray
     int delta_row = shot_row - current_row;
     int delta_col = shot_col - current_col;
 
-    // Calculate the number of steps needed based on the larger delta
+    // Normalize the direction to unit increments (step in a straight line)
     int steps = std::max(std::abs(delta_row), std::abs(delta_col));
-    double slope_row = 0.0;
-    double slope_col = 0.0;
-
-    if (steps != 0) 
-    {
-        slope_row = static_cast<double>(delta_row) / steps;
-        slope_col = static_cast<double>(delta_col) / steps;
+    if (steps == 0) {
+        std::cout << robot->m_name << " railgun - invalid shot direction.\n";
+        return;
     }
 
-    double r = current_row;
-    double c = current_col;
+    double step_row = static_cast<double>(delta_row) / steps;
+    double step_col = static_cast<double>(delta_col) / steps;
 
-    std::cout << "Railgun path from (" << current_row << "," << current_col 
-              << ") to (" << shot_row << "," << shot_col << "):\n";
+    // Traverse the path
+    double r = current_row + step_row;
+    double c = current_col + step_col;
+    std::vector<RobotBase*> target_list;
 
-    // Traverse the shot path
-    for (int step = 1; step <= steps; ++step) 
-    {
-        // Move the shot to the next position
-        r += slope_row;
-        c += slope_col;
+    while (true) {
+        int path_row = static_cast<int>(std::round(r));
+        int path_col = static_cast<int>(std::round(c));
 
-        int new_row = static_cast<int>(std::round(r));
-        int new_col = static_cast<int>(std::round(c));
-
-        // Check if the position is out of bounds
-        if (new_row < 0 || new_row >= m_size_row || new_col < 0 || new_col >= m_size_col) 
-        {
-            std::cout << "  Out of bounds at (" << new_row << "," << new_col << ")\n";
-            break; // Stop the shot if it exits the arena
+        // Check if out of bounds
+        if (path_row < 0 || path_row >= m_size_row || path_col < 0 || path_col >= m_size_col) {
+            break;
         }
 
-        char cell = m_board[new_row][new_col];
-        std::cout << "  Checking cell (" << new_row << "," << new_col << "): " << cell << "\n";
+        char cell = m_board[path_row][path_col];
 
-        if (cell == 'R') // A robot is here
-        {
-            // Identify the robot at the cell
-            for (RobotBase* target_robot : m_robots) 
-            {
+        // Check for robots (exclude the shooting robot itself)
+        if (cell == 'R') {
+            for (RobotBase* target_robot : m_robots) {
                 int target_row, target_col;
                 target_robot->get_current_location(target_row, target_col);
 
-                if (target_row == new_row && target_col == new_col) 
+                if (target_row == path_row && target_col == path_col && target_robot != robot) 
                 {
-                    apply_damage_to_robot(target_robot, railgun);
-                    std::cout << robot->m_name << " railgun hit " << target_robot->m_name 
-                              << " at (" << new_row << "," << new_col << ")\n";
-                    return; // Stop after hitting the first robot
+                    target_list.push_back(target_robot);
                 }
             }
         }
+
+        // Move to the next step along the ray
+        r += step_row;
+        c += step_col;
     }
 
-    std::cout << robot->m_name << " railgun missed.\n";
+    // Apply damage to all robots in the target list
+    if (!target_list.empty()) {
+        for (RobotBase* target_robot : target_list) {
+            apply_damage_to_robot(target_robot, railgun);
+        }
+    } else {
+        std::cout << robot->m_name << " railgun missed.\n";
+    }
 }
 
 
@@ -529,19 +525,15 @@ void Arena::handle_hammer_shot(RobotBase* robot, int shot_row, int shot_col)
     int delta_row = shot_row - current_row;
     int delta_col = shot_col - current_col;
 
-    // Normalize the direction to one cell (ensure it points within the hammer range)
-    int norm_row = (delta_row != 0) ? (delta_row / std::abs(delta_row)) : 0;
-    int norm_col = (delta_col != 0) ? (delta_col / std::abs(delta_col)) : 0;
-
-    // Determine the target cell based on the direction
-    int target_row = current_row + norm_row;
-    int target_col = current_col + norm_col;
+    // Normalize the direction to ensure the hit is exactly one square away
+    int target_row = current_row + (delta_row != 0 ? (delta_row / std::abs(delta_row)) : 0);
+    int target_col = current_col + (delta_col != 0 ? (delta_col / std::abs(delta_col)) : 0);
 
     // Clamp the target cell to stay within arena bounds
     target_row = std::clamp(target_row, 0, m_size_row - 1);
     target_col = std::clamp(target_col, 0, m_size_col - 1);
 
-    // Check if there's a robot in the target cell
+    // Check if there's a robot in the calculated target cell
     if (m_board[target_row][target_col] == 'R') 
     {
         // Find the robot in the list and apply damage
@@ -553,14 +545,12 @@ void Arena::handle_hammer_shot(RobotBase* robot, int shot_row, int shot_col)
             if (target_row_robot == target_row && target_col_robot == target_col) 
             {
                 apply_damage_to_robot(target, hammer);
-                break;
+                return;
             }
         }
     }
-    else 
-    {
-        std::cout << robot->m_name << " hammer missed at (" << target_row << "," << target_col << ").\n";
-    }
+
+    std::cout << robot->m_name << " hammer missed trying to hit (" << target_row << "," << target_col << ").\n";
 }
 
 

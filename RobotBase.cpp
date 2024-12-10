@@ -108,7 +108,6 @@ bool RobotBase::radar_enabled()
 int RobotBase::take_damage(int damage_in)
 {
     m_health -= damage_in;
-    m_armor -= 1;
     if (m_health < 0)
     {
         m_health = 0; 

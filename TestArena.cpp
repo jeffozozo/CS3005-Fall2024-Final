@@ -286,37 +286,59 @@ void TestArena::test_robot_creation() {
     print_test_result("NegativeBot armor clamped", negativeBot.get_armor() == 0);
 }
 
-// Test BadRobot with all weapons
-void TestArena::test_bad_robot_with_all_weapons() {
-    std::cout << "\nTesting ShooterRobot with all weapon types...\n";
 
+// Test BadRobot with all weapons
+void TestArena::test_bad_robot_with_all_weapons() 
+{
     WeaponType weapons[] = {flamethrower, railgun, grenade, hammer};
-    for (WeaponType weapon : weapons) {
-        std::cout << "\nTesting weapon: " << weapon << "\n";
+
+    struct ShotTestCase 
+    {
+    int weapon;
+    int in_range_row, in_range_col;
+    std::string description;
+    };
+
+    std::vector<ShotTestCase> weapon_tests = 
+    {
+        {flamethrower, 3, 3, "flamethrower test, range 2,2"},
+        {railgun, 5,5, "railgun test, 5,5"},
+        {grenade, 7,6, "grenade test, 7,6"},
+        {hammer, 2,2, "hammer test, 1,1"}
+    };
+
+    for (WeaponType weapon : weapons) 
+    {
+        std::cout << "\nTesting: " << weapon_tests[weapon].description << "\n";
 
         // **Valid Target Test**
         std::cout << "*** Testing valid target...\n";
-        Arena arena(10, 10); // Create a 10x10 arena
+        Arena arena(20, 20); // Create a 20x20 arena
         arena.initialize_board(true); // Empty board
 
         ShooterRobot shooter(weapon, "ShooterBot");
         TestRobot target(5, 3, hammer, "TargetBot");
-
-        shooter.move_to(5, 5);
-        std::cout << "Shooter at (5,5)\n";
-        target.move_to(7, 7); // Position the target within range based on the weapon
-        std::cout << "Target Robot at (7,7)" << std::endl;
-        shooter.set_boundaries(10, 10);
-        target.set_boundaries(10, 10);
+        shooter.set_boundaries(20, 20);
+        target.set_boundaries(20, 20);
 
         arena.m_robots.clear();
         arena.m_robots.push_back(&shooter);
         arena.m_robots.push_back(&target);
 
+        arena.m_board[1][1] = 'R';
+        shooter.move_to(1, 1);
+        std::cout << "Shooter at (1,1)\n";
+
+        int target_row = weapon_tests[weapon].in_range_row;
+        int target_col = weapon_tests[weapon].in_range_col;
+        arena.m_board[target_row][target_col] = 'R';
+        target.move_to(target_row, target_col); // Position the target within range based on the weapon
+        std::cout << "Target Robot at (" << target_row << "," << target_col << ")" << std::endl;
+
+
         // Construct radar_results with the target
         std::vector<RadarObj> radar_results;
-        radar_results.emplace_back('R', 7, 7);
-
+        radar_results.emplace_back('R', target_row, target_col);
 
         shooter.process_radar_results(radar_results);
         int shot_row, shot_col;
@@ -345,37 +367,58 @@ void TestArena::test_bad_robot_with_all_weapons() {
             print_test_result("Valid shot: shooter did not shoot", false);
         }
 
-        // **Invalid Target Test**
-        std::cout << "*** Testing invalid test\n";
+        // ** Invalid Target Test ************************************
+        std::cout << "*** Testing out of range\n";
+        ShooterRobot Nextshooter(weapon, "ShooterBot");
+        TestRobot Nexttarget(5, 3, hammer, "TargetBot");
+        Nextshooter.set_boundaries(20, 20);
+        Nexttarget.set_boundaries(20, 20);
+
         arena.m_robots.clear();
-        arena.m_robots.push_back(&shooter);
-        arena.m_robots.push_back(&target);
+        arena.m_robots.push_back(&Nextshooter);
+        arena.m_robots.push_back(&Nexttarget);
 
-        // Move target out of range based on weapon
-        switch (weapon) {
-            case flamethrower: target.move_to(10, 10); break;
-            case hammer: target.move_to(7, 7); break; // Hammer range is 1
-            case grenade: target.move_to(10, 10); break; // Grenade range is 10
-            case railgun: break; // Railgun has no range limit
-        }
+        arena.m_board[2][2] = 'R';
+        Nextshooter.move_to(2, 2);
+        std::cout << "Shooter at (2,2)\n";
 
-        // Update radar_results with the new location
+        // out of range target
+        target_row = 18;
+        target_col = 18;
+        arena.m_board[target_row][target_col] = 'R';
+        target.move_to(target_row, target_col); // Position the target within range based on the weapon
+        std::cout << "Target Robot at (" << target_row << "," << target_col << ")" << std::endl;
+
+        // Construct radar_results with the target
+        radar_results.emplace_back('R', target_row, target_col);
+
+        Nextshooter.process_radar_results(radar_results);
+        Nexttarget.move_to(18, 18);
+
+        // Update radar_results with out of range location
         radar_results.clear();
-        int row, col;
-        target.get_current_location(row,col);
+        int row,col;
+        Nexttarget.get_current_location(row,col);
         radar_results.emplace_back('R', row, col);
-        shooter.process_radar_results(radar_results);
+        Nextshooter.process_radar_results(radar_results);
 
-        if (shooter.get_shot_location(shot_row, shot_col)) {
-            int target_health_before = target.get_health();
+        //take the shot, even if target is out of range
+        Nextshooter.get_shot_location(shot_row, shot_col); 
+        int target_health_before = Nexttarget.get_health();
+        arena.handle_shot(&Nextshooter, shot_row, shot_col);
 
-            arena.handle_shot(&shooter, shot_row, shot_col);
+        int target_health_after = Nexttarget.get_health();
+        bool no_damage = (target_health_after == target_health_before);
 
-            int target_health_after = target.get_health();
-            bool no_damage = (target_health_after == target_health_before);
-            print_test_result("Invalid shot: target takes no damage", no_damage);
-        } else {
-            print_test_result("Invalid shot: shooter did not shoot", true);
-        }
+        //special case railgun - it is never out of range.
+        if(weapon == railgun)
+            if(no_damage)
+                print_test_result("railgun did not hit the target. No damage dealt", no_damage);
+            else
+                print_test_result("railgun hits.", true);
+        else
+            print_test_result("target was not hit. No damage dealt: ",no_damage);
+            
+
     }
 }
