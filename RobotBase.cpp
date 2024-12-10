@@ -22,9 +22,9 @@ RobotBase::RobotBase(int move_in, int armor_in, WeaponType weapon_in)
     : m_health(100), m_weapon(weapon_in),  radar_ok(true), m_name("Blank_Robot")
 {
     // Validate move input
-    if (move_in < 0)
+    if (move_in < 2)
     {
-        m_move = 0;
+        m_move = 2;
     }
     else if (move_in > 5)
     {

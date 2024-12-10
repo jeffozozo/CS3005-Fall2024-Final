@@ -394,7 +394,7 @@ void Arena::handle_flame_shot(RobotBase* robot, int shot_row, int shot_col)
     }
 }
 
-void Arena::handle_railgun_shot(RobotBase* robot, int shot_row, int shot_col) 
+void Arena::handle_railgun_shot(RobotBase* robot, int shot_row, int shot_col)
 {
     int current_row, current_col;
     robot->get_current_location(current_row, current_col);
@@ -416,6 +416,9 @@ void Arena::handle_railgun_shot(RobotBase* robot, int shot_row, int shot_col)
     double r = current_row;
     double c = current_col;
 
+    std::cout << "Railgun path from (" << current_row << "," << current_col 
+              << ") to (" << shot_row << "," << shot_col << "):\n";
+
     // Traverse the shot path
     for (int step = 1; step <= steps; ++step) 
     {
@@ -429,13 +432,16 @@ void Arena::handle_railgun_shot(RobotBase* robot, int shot_row, int shot_col)
         // Check if the position is out of bounds
         if (new_row < 0 || new_row >= m_size_row || new_col < 0 || new_col >= m_size_col) 
         {
+            std::cout << "  Out of bounds at (" << new_row << "," << new_col << ")\n";
             break; // Stop the shot if it exits the arena
         }
 
         char cell = m_board[new_row][new_col];
-        if (cell == 'R') // a robot is here
+        std::cout << "  Checking cell (" << new_row << "," << new_col << "): " << cell << "\n";
+
+        if (cell == 'R') // A robot is here
         {
-            // figure out which robot it is by matching coordinates
+            // Identify the robot at the cell
             for (RobotBase* target_robot : m_robots) 
             {
                 int target_row, target_col;
@@ -444,11 +450,15 @@ void Arena::handle_railgun_shot(RobotBase* robot, int shot_row, int shot_col)
                 if (target_row == new_row && target_col == new_col) 
                 {
                     apply_damage_to_robot(target_robot, railgun);
-                    break; // Continue checking other cells along the ray
+                    std::cout << robot->m_name << " railgun hit " << target_robot->m_name 
+                              << " at (" << new_row << "," << new_col << ")\n";
+                    return; // Stop after hitting the first robot
                 }
             }
         }
     }
+
+    std::cout << robot->m_name << " railgun missed.\n";
 }
 
 
@@ -560,81 +570,58 @@ void Arena::handle_move(RobotBase* robot)
     int move_direction;
     int move_distance;
 
-    // Get the direction and distance desired from the robot
-    robot->get_movement(move_direction, move_distance);
-
-    if (move_direction == 0 || move_distance == 0)
+    // Check if the robot cannot move
+    if (robot->get_move() == 0)
     {
-        std::cout << robot->m_name << " chooses not to move.\n";
-        return; // No movement requested
+        std::cout << robot->m_name << " cannot move.\n";
+        return;
     }
 
-    // Predefined directional increments for movement (1-8, clock directions)
-    static const std::pair<int, int> directions[] = {
-        {0, 0},   // Placeholder for index 0 (unused)
-        {-1, 0},  // 1: Up
-        {-1, 1},  // 2: Up-right
-        {0, 1},   // 3: Right
-        {1, 1},   // 4: Down-right
-        {1, 0},   // 5: Down
-        {1, -1},  // 6: Down-left
-        {0, -1},  // 7: Left
-        {-1, -1}  // 8: Up-left
-    };
+    // Get the direction and distance desired from the robot
+    robot->get_movement(move_direction, move_distance);
+    move_distance = std::clamp(move_distance, 0, robot->get_move());
+
+    // Check if no movement is requested
+    if (move_direction < 1 || move_direction > 8  || move_distance == 0)
+    {
+        std::cout << robot->m_name << " chooses not to move.\n";
+        return;
+    }
 
     int current_row, current_col;
     robot->get_current_location(current_row, current_col);
-    int move_speed = robot->get_move();
 
-    // Clamp the move distance to the robot's maximum speed
-    move_distance = std::clamp(move_distance, 0, move_speed);
-
-    // Calculate the directional deltas
+    // Retrieve the direction deltas from the predefined directions map
     int delta_row = directions[move_direction].first;
     int delta_col = directions[move_direction].second;
 
-    // Calculate the target location clamp for arena boundaries
-    int target_row = std::clamp(current_row + delta_row * move_distance, 0, m_size_row - 1);
-    int target_col = std::clamp(current_col + delta_col * move_distance, 0, m_size_col - 1);
-
-    // Clear the robot's current position on the board
-    m_board[current_row][current_col] = '.';
-
-    // Step through the path to the target location
+    // Loop through each step of the intended movement
     for (int step = 1; step <= move_distance; ++step)
     {
-        int intermediate_row = std::clamp(current_row + delta_row * step, 0, m_size_row - 1);
-        int intermediate_col = std::clamp(current_col + delta_col * step, 0, m_size_col - 1);
+        // Calculate the next cell - make sure it is in the arena.
+        int next_row = std::clamp(current_row + delta_row, 0, m_size_row - 1);
+        int next_col = std::clamp(current_col + delta_col, 0, m_size_col - 1);
+        char cell = m_board[next_row][next_col];
 
-        char cell = m_board[intermediate_row][intermediate_col];
-        if (cell == 'F') // Flamethrower detected
+        // Check for obstacles or collisions
+        if (cell != '.')
         {
-            std::cout << robot->m_name << " moves through a flamethrower at (" 
-                      << intermediate_row << "," << intermediate_col << "). Taking damage!\n";
-            apply_damage_to_robot(robot, flamethrower);
+            handle_collision(robot, cell, next_row, next_col);
+            return;
         }
 
-        // Stop movement if encountering an obstacle
-        if (step == move_distance) // At the final destination
-        {
-            if (cell != '.') 
-            {
-                std::cout << " collision at (" << intermediate_row << "," << intermediate_col << ")\n";
-                handle_collision(robot, cell, intermediate_row, intermediate_col);
-
-                // Restore current position if collision occurred
-                m_board[current_row][current_col] = 'R';
-                return;
-            }
-        }
+        // Move the robot to the next cell
+        m_board[current_row][current_col] = '.'; // Clear the current cell
+        robot->move_to(next_row, next_col);
+        m_board[next_row][next_col] = 'R'; // Mark the new position
+        current_row = next_row;
+        current_col = next_col;
     }
 
-    // Move the robot to the target position
-    robot->move_to(target_row, target_col);
-    m_board[target_row][target_col] = 'R'; 
-
-    std::cout << robot->m_name << " moves to (" << target_row << "," << target_col << ").\n";
+    std::cout << robot->m_name << " moves to (" << current_row << "," << current_col << ").\n";
 }
+
+
 
 // Handle collisions or interactions with obstacles
 void Arena::handle_collision(RobotBase* robot, char cell, int row, int col) 
@@ -643,43 +630,48 @@ void Arena::handle_collision(RobotBase* robot, char cell, int row, int col)
     {
         case 'M': // Mound
             std::cout << robot->m_name << " is stopped by a mound at (" 
-                      << row << "," << col << ")." << std::endl;
+                      << row << "," << col << "). " << std::endl;
             break;
 
         case 'X': // Dead Robot
             std::cout << robot->m_name << " is stopped by a dead robot at (" 
-                      << row << "," << col << ")." << std::endl;
+                      << row << "," << col << "). " << std::endl;
             break;
 
         case 'R': // Another robot
-            std::cout << robot->m_name << " encounters another robot at (" 
-                      << row << "," << col << ")." << std::endl;
+            std::cout << robot->m_name << " crashes into another robot at (" 
+                      << row << "," << col << "). " << std::endl;
             break;
 
         case 'P': // Pit
             robot->disable_movement();
             std::cout << robot->m_name << " is stuck in a pit at (" 
-                      << row << "," << col << "). Movement disabled." << std::endl;
+                      << row << "," << col << "). Movement disabled. " << std::endl;
             break;
 
         case 'F': // Flamethrower
             std::cout << robot->m_name << " encounters a flamethrower at (" 
-                      << row << "," << col << "). Taking damage!" << std::endl;
+                      << row << "," << col << "). Taking damage! " << std::endl;
             apply_damage_to_robot(robot, flamethrower); // Apply flamethrower damage
             break;
 
         default:
-            std::cerr << "Unknown obstacle at (" << row << "," << col << ")." << std::endl;
+            std::cerr << "Unknown obstacle: " << cell << " at (" << row << "," << col << ")." << std::endl;
             break;
     }
 }
 
 
 
-void Arena::initialize_board() 
+void Arena::initialize_board(bool empty) 
 {
+
     // Resize the board and initialize all cells to '.'
     m_board.resize(m_size_row, std::vector<char>(m_size_col, '.'));
+    
+    //empty makes it so there are no obstacles.
+    if(empty)
+        return;
 
     // Determine the maximum number of obstacles based on the size of the board
     int total_cells = m_size_row * m_size_col;
@@ -687,9 +679,6 @@ void Arena::initialize_board()
 
     // Obstacle types to place
     std::vector<char> obstacle_types = {'M', 'P', 'F'};
-
-    // Seed the random number generator
-    std::srand(static_cast<unsigned>(std::time(nullptr)));
 
     for (char obstacle : obstacle_types) 
     {
@@ -815,6 +804,9 @@ bool Arena::winner()
 // assumes robots have been loaded.
 void Arena::run_simulation(bool live) 
 {
+
+   // Seed the random number generator
+    std::srand(static_cast<unsigned>(std::time(nullptr)));
 
     std::vector<RadarObj> radar_results;
 
